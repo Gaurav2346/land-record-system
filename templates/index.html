@@ -224,7 +224,7 @@
                                         </div>
                                         <div class="input-group">
                                             <span class="input-group-text font-mono small">SHA-256</span>
-                                            <input type="text" class="form-control font-mono text-dark" name="document_hash" id="registerDocHash" required placeholder="Auto-generating 64-hex SHA-256 hash...">
+                                            <input type="text" class="form-control font-mono text-dark" name="document_hash" id="registerDocHash" placeholder="Auto-generating 64-hex SHA-256 hash..." readonly>
                                             <button class="btn btn-outline-secondary copy-btn" type="button" data-copy-target="registerDocHash" title="Copy Hash">
                                                 <i class="bi bi-clipboard"></i>
                                             </button>
@@ -1023,6 +1023,7 @@
     }
 
     function switchTab(tabId) {
+        if (!tabId) return;
         const triggerEl = document.querySelector(`[data-bs-target="#${tabId}"]`);
         if (triggerEl) {
             bootstrap.Tab.getOrCreateInstance(triggerEl).show();
@@ -1541,7 +1542,7 @@
 
         const typeBadgeMap = {
             "Residential": "bg-primary-subtle text-primary border-primary-subtle",
-            "Commercial": "bg-purple-subtle text-purple border-purple-subtle",
+            "Commercial": "bg-secondary-subtle text-secondary border-secondary-subtle",
             "Agricultural": "bg-success-subtle text-success border-success-subtle",
             "Industrial": "bg-warning-subtle text-warning border-warning-subtle"
         };
@@ -1639,6 +1640,11 @@
 
         const form = e.target;
         const body = Object.fromEntries(new FormData(form));
+
+        // If SHA-256 field is missing/partial, clear it — server will auto-generate
+        if (!body.document_hash || body.document_hash.length !== 64) {
+            body.document_hash = "";
+        }
 
         try {
             const data = await parseJsonResponse(await fetch("/api/properties", {
