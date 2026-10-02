@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LandLedger — Blockchain Land Title & Property Registry</title>
+    <!-- Bootstrap 5.3.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons 1.11.3 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom Theme Styles -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+
+<!-- Modern Glassmorphism Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+    <div class="container-fluid px-lg-5">
+        <a class="navbar-brand d-flex align-items-center gap-3" href="#">
+            <div class="brand-icon-wrapper">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <div>
+                <div class="brand-title">LandLedger Protocol</div>
+                <div class="brand-subtitle">Decentralized Land Title & Property Registry</div>
+            </div>
+        </a>
+
+        <div class="d-flex align-items-center gap-3 ms-auto mt-2 mt-lg-0">
+            <!-- Network Status Pill -->
+            <div class="network-pill" id="chainStatusPill">
+                <span class="pulse-indicator online" id="statusDot"></span>
+                <span id="statusText" class="fw-semibold">Connecting to chain…</span>
+            </div>
+
+            <!-- Gas Account Pill -->
+            <div class="network-pill d-none d-md-inline-flex" id="accountPill">
+                <i class="bi bi-wallet2 text-primary"></i>
+                <span id="accountBalanceBadge" class="badge bg-success-subtle text-success border border-success-subtle">-- ETH</span>
+                <span id="accountAddressTruncated" class="font-mono text-white-50">--</span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid px-lg-5 py-4">
+
+    <!-- KPI Metric Cards Overview Bar -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="kpi-icon indigo">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Verified</span>
+                </div>
+                <div class="kpi-value" id="kpiTotalProperties">--</div>
+                <div class="kpi-label">Registered Land Titles</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="kpi-icon emerald">
+                        <i class="bi bi-cpu"></i>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle" id="kpiChainBadge">Ganache</span>
+                </div>
+                <div class="kpi-value" id="kpiChainId">Chain 1337</div>
+                <div class="kpi-label">Blockchain Network</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="kpi-icon amber">
+                        <i class="bi bi-arrow-left-right"></i>
+                    </div>
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">On-Chain</span>
+                </div>
+                <div class="kpi-value" id="kpiTotalTransfers">--</div>
+                <div class="kpi-label">Ownership Transfers</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="kpi-icon purple">
+                        <i class="bi bi-fingerprint"></i>
+                    </div>
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">256-bit</span>
+                </div>
+                <div class="kpi-value text-truncate">SHA-256</div>
+                <div class="kpi-label">Deed Cryptography</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segmented Navigation Tabs -->
+    <ul class="nav nav-pills nav-pills-custom mb-4" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-register" type="button">
+                <i class="bi bi-plus-circle"></i> Register Title
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-verify" type="button">
+                <i class="bi bi-shield-check"></i> Verify On-Chain
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-transfer" type="button">
+                <i class="bi bi-arrow-left-right"></i> Transfer Ownership
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-document" type="button">
+                <i class="bi bi-hash"></i> Document SHA-256
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-list" type="button">
+                <i class="bi bi-collection"></i> Registry Explorer
+                <span class="badge bg-secondary ms-1 rounded-pill" id="tabTotalBadge">--</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tabs Content Container -->
+    <div class="tab-content">
+
+        <!-- 1. REGISTER TITLE TAB -->
+        <div class="tab-pane fade show active" id="tab-register">
+            <div class="card section-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="card-title-lg">
+                                <i class="bi bi-file-earmark-plus text-primary"></i> Register Land Title on Blockchain
+                            </h2>
+                            <p class="text-muted small mb-0">Smart contract validates and writes immutable title; metadata mirrored in SQLite database.</p>
+                        </div>
+                        <span class="badge bg-light text-dark border d-none d-md-inline-block">
+                            <i class="bi bi-gas-pump text-success me-1"></i> Gas fee handled by Ganache Account
+                        </span>
+                    </div>
+
+                    <form id="registerForm">
+                        <div class="row g-4">
+                            <!-- Left Column: Property Specs -->
+                            <div class="col-lg-6">
+                                <h6 class="text-uppercase text-muted fw-bold small mb-3">1. Property Specifications</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Property Number</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                                            <input type="text" class="form-control" name="property_number" required placeholder="e.g. MH-MUM-2026-01">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Survey / Cadastral Number</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-geo"></i></span>
+                                            <input type="text" class="form-control" name="survey_number" required placeholder="e.g. SRV/2026/894">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Property Classification</label>
+                                        <select class="form-select" name="property_type" required>
+                                            <option value="Residential" selected>Residential</option>
+                                            <option value="Commercial">Commercial</option>
+                                            <option value="Agricultural">Agricultural</option>
+                                            <option value="Industrial">Industrial</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Total Land Area (sq.ft)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" name="area" required min="1" placeholder="e.g. 2500">
+                                            <span class="input-group-text">sq.ft</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Geographic Location / Address</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                                            <input type="text" class="form-control" name="location" required placeholder="e.g. Bandra Kurla Complex, Mumbai, Maharashtra">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Ownership & Deed Hash -->
+                            <div class="col-lg-6">
+                                <h6 class="text-uppercase text-muted fw-bold small mb-3">2. Ownership & Cryptographic Deed Verification</h6>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Legal Owner Full Name</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                            <input type="text" class="form-control" name="owner_name" required placeholder="e.g. Vikramaditya Singhania">
+                                        </div>
+                                    </div>
+
+                                    <!-- Document SHA-256 Auto-Generation Section -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label mb-0 fw-bold">
+                                                Document SHA-256 Hash
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" id="hashStatusBadge">
+                                                    <i class="bi bi-magic me-1"></i>Auto-Generated
+                                                </span>
+                                            </label>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" id="autoGenHashBtn" title="Regenerate unique cryptographic hash">
+                                                    <i class="bi bi-arrow-clockwise"></i> Re-generate
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" id="triggerDocUploadBtn" title="Compute hash from file (PDF/Deed/Image)">
+                                                    <i class="bi bi-file-earmark-arrow-up"></i> Upload Deed
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="input-group">
+                                            <span class="input-group-text font-mono small">SHA-256</span>
+                                            <input type="text" class="form-control font-mono text-dark" name="document_hash" id="registerDocHash" required placeholder="Auto-generating 64-hex SHA-256 hash...">
+                                            <button class="btn btn-outline-secondary copy-btn" type="button" data-copy-target="registerDocHash" title="Copy Hash">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                        <input type="file" id="registerDocFileInput" class="d-none" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt">
+                                        <div class="form-text small text-muted mt-1" id="hashSourceHint">
+                                            <i class="bi bi-info-circle me-1"></i>Cryptographic fingerprint automatically generated from property deed metadata.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 pt-2">
+                                        <button type="submit" class="btn btn-primary w-100 py-2 fs-6 shadow-sm" id="registerBtn">
+                                            <i class="bi bi-lock-fill me-1"></i> Register Title on Blockchain
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Alert message container -->
+                    <div id="registerAlert" class="mt-3 d-none"></div>
+
+                    <!-- Modern UI: Register Result Card -->
+                    <div id="registerResultCard" class="result-card card mt-4 d-none">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fs-4"><i class="bi bi-check-circle-fill"></i></span>
+                                <div>
+                                    <h5 class="mb-0 fw-bold">Title Registered on Blockchain</h5>
+                                    <small class="text-white-50">Permanent immutable record created on Ethereum Ganache smart contract</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-white text-success fs-6 px-3 py-2 fw-bold" id="regBadgePropertyId">ID #--</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Blockchain Confirmation Banner -->
+                            <div class="bg-light rounded-3 p-3 border mb-4">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-7">
+                                        <span class="text-muted small d-block">Transaction Hash</span>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <code class="tx-hash text-primary user-select-all" id="regTxHash">--</code>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary copy-btn py-0 px-2" data-copy-target="regTxHash" title="Copy Tx Hash">
+                                                <i class="bi bi-clipboard"></i> Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="text-muted small d-block">Block Number</span>
+                                        <span class="fw-bold text-dark fs-6" id="regBlockNum">--</span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span class="text-muted small d-block">Status</span>
+                                        <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Confirmed</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Property Details Grid -->
+                            <h6 class="fw-bold text-uppercase text-muted small mb-3">Verified Property Metadata</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-sm-6 col-md-4">
+                                    <div class="data-box">
+                                        <div class="label">Property Number</div>
+                                        <div class="value" id="regPropNumber">--</div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-md-4">
+                                    <div class="data-box">
+                                        <div class="label">Survey Number</div>
+                                        <div class="value" id="regSurveyNumber">--</div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-md-4">
+                                    <div class="data-box">
+                                        <div class="label">Registered Owner</div>
+                                        <div class="value text-primary" id="regOwnerName">--</div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-md-4">
+                                    <div class="data-box">
+                                        <div class="label">Property Classification</div>
+                                        <div class="value"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="regPropType">--</span></div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-md-4">
+                                    <div class="data-box">
+                                        <div class="label">Total Area</div>
+                                        <div class="value"><span id="regArea">--</span> <small class="text-muted fw-normal">sq.ft</small></div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-md-4">
+                                    <div class="data-box">
+                                        <div class="label">Location</div>
+                                        <div class="value" id="regLocation">--</div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="data-box">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <div class="label mb-0">Owner Wallet Address (Smart Contract)</div>
+                                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none copy-btn" data-copy-target="regOwnerWallet">Copy Address</button>
+                                        </div>
+                                        <code class="tx-hash text-dark user-select-all" id="regOwnerWallet">--</code>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="data-box">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <div class="label mb-0">Document SHA-256 Fingerprint</div>
+                                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none copy-btn" data-copy-target="regDocHash">Copy Hash</button>
+                                        </div>
+                                        <code class="tx-hash text-success user-select-all" id="regDocHash">--</code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action CTAs -->
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center pt-2 border-top">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-success btn-sm" id="regVerifyNowBtn">
+                                        <i class="bi bi-shield-check me-1"></i> Verify on Blockchain
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="regViewAllBtn">
+                                        <i class="bi bi-list-ul me-1"></i> View in Records
+                                    </button>
+                                </div>
+                                <button type="button" class="btn btn-light btn-sm text-secondary" id="regResetFormBtn">
+                                    <i class="bi bi-plus-lg me-1"></i> Register Another Title
+                                </button>
+                            </div>
+
+                            <!-- Optional Collapsible Raw JSON for developers -->
+                            <details class="mt-3">
+                                <summary class="text-muted small cursor-pointer">Technical Payload (Raw Blockchain JSON)</summary>
+                                <pre class="json-preview mt-2" id="registerRawJson"></pre>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. VERIFY TITLE TAB -->
+        <div class="tab-pane fade" id="tab-verify">
+            <div class="card section-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="card-title-lg">
+                                <i class="bi bi-shield-check text-success"></i> Verify Land Title Integrity
+                            </h2>
+                            <p class="text-muted small mb-0">Query the Ethereum smart contract directly and cross-verify with the local registry database.</p>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Property ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="number" class="form-control" id="verifyPropertyId" min="1" value="1" placeholder="Enter Property ID (e.g. 1)">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-success w-100" id="verifyBtn">
+                                <i class="bi bi-search me-1"></i> Query & Verify On-Chain
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" onclick="quickVerify(1)">Sample #1</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" id="btnVerifyLatest">Latest</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="verifyAlert" class="mt-3 d-none"></div>
+
+                    <!-- Modern UI: Verify Result Card -->
+                    <div id="verifyResultCard" class="result-card card mt-4 d-none">
+                        <div class="card-header d-flex justify-content-between align-items-center py-3" id="verifyHeader">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fs-4" id="verifyStatusIcon"><i class="bi bi-shield-check text-success"></i></span>
+                                <div>
+                                    <h5 class="mb-0 fw-bold" id="verifyStatusTitle">Blockchain Verification Result</h5>
+                                    <small class="text-muted" id="verifyStatusSubtitle">Validated directly from Ethereum smart contract</small>
+                                </div>
+                            </div>
+                            <span class="badge px-3 py-2 fs-6 fw-bold" id="verifyBadgeMatch">Verified</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Verification Banner Message -->
+                            <div class="alert mb-4" id="verifyBannerMsg"></div>
+
+                            <div class="row g-4">
+                                <!-- Left Column: On-Chain Smart Contract Record -->
+                                <div class="col-lg-6">
+                                    <div class="card h-100 border shadow-xs">
+                                        <div class="card-header bg-dark text-white py-2 d-flex justify-content-between align-items-center">
+                                            <span class="fw-semibold small"><i class="bi bi-cpu me-1"></i> On-Chain Record (Smart Contract)</span>
+                                            <span class="badge bg-secondary">Authoritative Truth</span>
+                                        </div>
+                                        <div class="card-body p-3">
+                                            <table class="table table-sm table-borderless mb-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="text-muted small" style="width: 38%;">Property ID</td>
+                                                        <td class="fw-bold" id="vfChainId">--</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-muted small">Property #</td>
+                                                        <td class="fw-bold" id="vfChainPropNum">--</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-muted small">Survey #</td>
+                                                        <td class="fw-bold" id="vfChainSurveyNum">--</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-muted small">Legal Owner</td>
+                                                        <td class="fw-bold text-primary" id="vfChainOwner">--</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-muted small">Owner Wallet</td>
+                                                        <td>
+                                                            <code class="tx-hash d-block user-select-all small" id="vfChainWallet">--</code>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-muted small">Classification & Area</td>
+                                                        <td><span id="vfChainType">--</span> · <span id="vfChainArea">--</span> sq.ft</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-muted small">Location</td>
+                                                        <td id="vfChainLocation">--</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-muted small">Document Hash</td>
+                                                        <td>
+                                                            <code class="tx-hash d-block user-select-all text-success small" id="vfChainHash">--</code>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: Database Mirror & Integrity Check -->
+                                <div class="col-lg-6">
+                                    <div class="card h-100 border shadow-xs">
+                                        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                            <span class="fw-semibold small"><i class="bi bi-database me-1"></i> Local Mirror (SQLite DB)</span>
+                                            <span class="badge bg-light text-dark border" id="vfDbStatusBadge">Mirror Record</span>
+                                        </div>
+                                        <div class="card-body p-3">
+                                            <div id="vfDbContent">
+                                                <table class="table table-sm table-borderless mb-0">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td class="text-muted small" style="width: 38%;">Database ID</td>
+                                                            <td class="fw-bold" id="vfDbId">--</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted small">Property #</td>
+                                                            <td id="vfDbPropNum">--</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted small">Survey #</td>
+                                                            <td id="vfDbSurveyNum">--</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted small">Recorded Owner</td>
+                                                            <td id="vfDbOwner">--</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted small">Recorded Wallet</td>
+                                                            <td>
+                                                                <code class="tx-hash d-block user-select-all small" id="vfDbWallet">--</code>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted small">Registration Tx</td>
+                                                            <td>
+                                                                <code class="tx-hash d-block user-select-all small text-primary" id="vfDbTxHash">--</code>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted small">Block Number</td>
+                                                            <td id="vfDbBlock">--</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted small">Document Hash</td>
+                                                            <td>
+                                                                <code class="tx-hash d-block user-select-all text-success small" id="vfDbHash">--</code>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div id="vfDbEmpty" class="text-muted small py-4 text-center d-none">
+                                                No local database record found for this property ID. Exists exclusively on blockchain.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Integrity Checklist -->
+                            <div class="mt-4 p-3 bg-light rounded-3 border">
+                                <h6 class="fw-bold text-uppercase text-muted small mb-2"><i class="bi bi-shield-lock me-1"></i> Cryptographic Tamper-Check Validation</h6>
+                                <div class="verification-checklist row g-2" id="vfChecklist"></div>
+                            </div>
+
+                            <!-- Transfer History for Verified Property -->
+                            <div class="mt-4 d-none" id="vfHistoryWrap">
+                                <h6 class="fw-bold text-uppercase text-muted small mb-2"><i class="bi bi-clock-history me-1"></i> Ownership Transfer Log</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Previous Owner</th>
+                                                <th>New Owner</th>
+                                                <th>Tx Hash</th>
+                                                <th>Block</th>
+                                                <th>Timestamp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="vfHistoryBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Action CTAs -->
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center pt-3 border-top mt-4">
+                                <button type="button" class="btn btn-outline-warning btn-sm" id="vfTransferBtn">
+                                    <i class="bi bi-arrow-left-right me-1"></i> Transfer Title Ownership
+                                </button>
+                                <details class="text-muted small">
+                                    <summary class="cursor-pointer">Technical Payload (Raw JSON)</summary>
+                                    <pre class="json-preview mt-2" id="verifyRawJson"></pre>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. TRANSFER TITLE TAB -->
+        <div class="tab-pane fade" id="tab-transfer">
+            <div class="card section-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="card-title-lg">
+                                <i class="bi bi-arrow-left-right text-warning"></i> Transfer Land Title Ownership
+                            </h2>
+                            <p class="text-muted small mb-0">Execute ownership transition on the smart contract. Requires unlocked Ganache account for the current owner.</p>
+                        </div>
+                    </div>
+
+                    <form id="transferForm" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Property ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                                <input type="number" class="form-control" name="property_id" required min="1" placeholder="e.g. 1">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">New Owner Full Name</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" name="new_owner_name" required placeholder="e.g. Ananya Deshmukh">
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0">New Owner Wallet Address</label>
+                                <div class="dropdown">
+                                    <button class="btn btn-link btn-sm p-0 text-decoration-none dropdown-toggle small" type="button" data-bs-toggle="dropdown">
+                                        Choose Ganache Account
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm small" id="ganacheAccountsDropdown">
+                                        <li><span class="dropdown-item text-muted">Loading accounts…</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text font-mono">0x</span>
+                                <input type="text" class="form-control font-mono" name="new_owner_wallet" id="transferNewWallet" required placeholder="0x… Ganache wallet address">
+                            </div>
+                        </div>
+                        <div class="col-12 pt-2">
+                            <button type="submit" class="btn btn-warning" id="transferBtn">
+                                <i class="bi bi-arrow-repeat me-1"></i> Execute Title Transfer On-Chain
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" id="loadHistoryBtn">
+                                <i class="bi bi-clock-history me-1"></i> Load Transfer History
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="transferAlert" class="mt-3 d-none"></div>
+
+                    <!-- Modern UI: Transfer Result Card -->
+                    <div id="transferResultCard" class="result-card card mt-4 d-none">
+                        <div class="card-header bg-warning-subtle text-dark border-bottom d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fs-4"><i class="bi bi-check-circle-fill text-warning"></i></span>
+                                <div>
+                                    <h5 class="mb-0 fw-bold">Title Ownership Transferred</h5>
+                                    <small class="text-muted">Updated on Ethereum smart contract and recorded in historical ledger</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-warning text-dark fs-6 px-3 py-2 fw-bold" id="trBadgePropertyId">ID #--</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Visual Ownership Handoff -->
+                            <div class="row align-items-center g-3 mb-4">
+                                <div class="col-md-5">
+                                    <div class="p-3 bg-light border rounded-3">
+                                        <span class="badge bg-secondary-subtle text-secondary mb-2">Previous Owner</span>
+                                        <h6 class="fw-bold mb-1" id="trPrevOwnerName">--</h6>
+                                        <code class="tx-hash small text-muted user-select-all d-block" id="trPrevOwnerWallet">--</code>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 text-center text-primary fs-3">
+                                    <i class="bi bi-arrow-right"></i>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="p-3 bg-success-subtle border border-success-subtle rounded-3">
+                                        <span class="badge bg-success mb-2">New Legal Owner</span>
+                                        <h6 class="fw-bold mb-1 text-success" id="trNewOwnerName">--</h6>
+                                        <code class="tx-hash small text-dark user-select-all d-block" id="trNewOwnerWallet">--</code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Blockchain Transaction Confirmation -->
+                            <div class="bg-light rounded-3 p-3 border mb-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-7">
+                                        <span class="text-muted small d-block">Transfer Transaction Hash</span>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <code class="tx-hash text-primary user-select-all" id="trTxHash">--</code>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 copy-btn" data-copy-target="trTxHash">
+                                                <i class="bi bi-clipboard"></i> Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <span class="text-muted small d-block">Block Number</span>
+                                        <span class="fw-bold text-dark fs-6" id="trBlockNum">--</span>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <span class="text-muted small d-block">Confirmation</span>
+                                        <span class="badge bg-success"><i class="bi bi-check2 me-1"></i>Mined</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action CTAs -->
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center pt-2 border-top">
+                                <button type="button" class="btn btn-outline-success btn-sm" id="trVerifyBtn">
+                                    <i class="bi bi-shield-check me-1"></i> Verify Updated Title on Chain
+                                </button>
+                                <details class="text-muted small">
+                                    <summary class="cursor-pointer">Technical Payload (Raw JSON)</summary>
+                                    <pre class="json-preview mt-2" id="transferRawJson"></pre>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="historyTableWrap" class="mt-4 d-none">
+                        <h6 class="fw-bold text-uppercase text-muted small mb-2"><i class="bi bi-clock-history me-1"></i> Ownership Transfer History</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>From</th>
+                                        <th>To</th>
+                                        <th>Tx Hash</th>
+                                        <th>Block</th>
+                                        <th>Time (UTC)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. DOCUMENT SHA-256 HASH TAB -->
+        <div class="tab-pane fade" id="tab-document">
+            <div class="card section-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h2 class="card-title-lg">
+                                <i class="bi bi-fingerprint text-info"></i> SHA-256 Document Verification & Generator
+                            </h2>
+                            <p class="text-muted small mb-0">Compute tamper-evident cryptographic hashes for deed papers, survey maps, or agreements.</p>
+                        </div>
+                    </div>
+
+                    <form id="hashForm">
+                        <div class="row g-4">
+                            <div class="col-lg-6">
+                                <label class="form-label">Option A: Paste Document / Deed Text</label>
+                                <textarea class="form-control" name="text" rows="5" placeholder="Enter title deed description, conveyance clause, or certificate text…"></textarea>
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label">Option B: Drag & Drop Deed File (PDF / Image / Doc)</label>
+                                <div class="deed-dropzone" id="deedDropzone">
+                                    <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                                    <div class="fw-semibold">Click to browse or drag & drop deed file</div>
+                                    <small class="text-muted d-block">Supported formats: PDF, DOCX, PNG, JPG, TXT (up to 10MB)</small>
+                                    <input type="file" class="d-none" name="file" id="hashFile">
+                                    <div id="dropzoneFileName" class="mt-2 text-primary fw-semibold small d-none"></div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-secondary">
+                                    <i class="bi bi-cpu me-1"></i> Compute Cryptographic SHA-256
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div id="hashAlert" class="mt-3 d-none"></div>
+
+                    <!-- Modern UI: Document Hash Result Card -->
+                    <div id="hashResultCard" class="result-card card mt-4 d-none">
+                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fs-4"><i class="bi bi-lock-fill text-info"></i></span>
+                                <div>
+                                    <h5 class="mb-0 fw-bold">SHA-256 Digest Computed</h5>
+                                    <small class="text-white-50">Cryptographic 256-bit tamper-evident fingerprint for land title / deed</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-secondary font-mono" id="hashSourceBadge">File</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <label class="text-muted small d-block mb-1 fw-bold">Standard 64-Hex SHA-256 Hash</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-mono bg-light text-dark" id="hashOutputRaw" readonly>
+                                    <button class="btn btn-outline-primary copy-btn" type="button" data-copy-target="hashOutputRaw">
+                                        <i class="bi bi-clipboard"></i> Copy
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="text-muted small d-block mb-1 fw-bold">Ethereum bytes32 Compatible Format (0x-Prefixed)</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-mono bg-light text-dark" id="hashOutputPrefixed" readonly>
+                                    <button class="btn btn-outline-secondary copy-btn" type="button" data-copy-target="hashOutputPrefixed">
+                                        <i class="bi bi-clipboard"></i> Copy 0x
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 border d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-semibold d-block">Ready to attach this hash to a land record?</span>
+                                    <small class="text-muted">Directly use this cryptographic hash in the property registration form.</small>
+                                </div>
+                                <button type="button" class="btn btn-primary btn-sm" id="useHashInRegisterBtn">
+                                    <i class="bi bi-pencil-square me-1"></i> Use in Registration Form ➔
+                                </button>
+                            </div>
+
+                            <details class="mt-3 text-muted small">
+                                <summary class="cursor-pointer">Technical Payload (Raw JSON)</summary>
+                                <pre class="json-preview mt-2" id="hashRawJson"></pre>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. REGISTRY EXPLORER (ALL RECORDS) TAB -->
+        <div class="tab-pane fade" id="tab-list">
+            <div class="card section-card">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <h2 class="card-title-lg">
+                                <i class="bi bi-collection text-primary"></i> Land Title Registry Explorer
+                            </h2>
+                            <small class="text-muted" id="listSummary">Loading records…</small>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <!-- Live search bar -->
+                            <div class="input-group input-group-sm" style="width: 240px;">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" id="tableSearchInput" placeholder="Filter records…">
+                            </div>
+                            <!-- Property Type Filter -->
+                            <select class="form-select form-select-sm" style="width: auto" id="typeFilterSelect">
+                                <option value="ALL" selected>All Types</option>
+                                <option value="Residential">Residential</option>
+                                <option value="Commercial">Commercial</option>
+                                <option value="Agricultural">Agricultural</option>
+                                <option value="Industrial">Industrial</option>
+                            </select>
+                            <!-- Page Size -->
+                            <select class="form-select form-select-sm" style="width: auto" id="pageSize">
+                                <option value="25">25 / page</option>
+                                <option value="50" selected>50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="refreshListBtn">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive rounded-3 border" style="max-height: 520px; overflow-y: auto;">
+                        <table class="table table-hover table-properties align-middle">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Property #</th>
+                                    <th>Survey #</th>
+                                    <th>Legal Owner</th>
+                                    <th>Type</th>
+                                    <th>Area (sq.ft)</th>
+                                    <th>Document Hash</th>
+                                    <th>Registration Tx</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="propertiesBody">
+                                <tr><td colspan="9" class="text-muted py-4 text-center">Loading title registry…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="prevPageBtn">
+                            <i class="bi bi-chevron-left me-1"></i> Previous
+                        </button>
+                        <span class="small text-muted fw-semibold" id="pageInfo">Page 1</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="nextPageBtn">
+                            Next <i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Digital Title Deed Certificate Modal -->
+    <div class="modal fade" id="certificateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body p-4">
+                    <div class="certificate-frame" id="printableCertificate">
+                        <div class="certificate-header">
+                            <div class="certificate-seal">
+                                <i class="bi bi-award-fill"></i>
+                            </div>
+                            <h2 class="certificate-title">Digital Land Title Certificate</h2>
+                            <div class="text-muted small letter-spacing-1">BLOCKCHAIN-AUTHENTICATED IMMUTABLE RECORD</div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <span class="text-muted small d-block">Title Identification</span>
+                                <div class="fw-bold fs-5" id="certPropertyId">ID #--</div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <span class="text-muted small d-block">Cadastral Survey Number</span>
+                                <div class="fw-bold fs-5" id="certSurveyNum">--</div>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted small d-block">Registered Legal Owner</span>
+                                <div class="fw-bold text-primary fs-5" id="certOwnerName">--</div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <span class="text-muted small d-block">Land Classification & Area</span>
+                                <div class="fw-bold" id="certTypeArea">--</div>
+                            </div>
+                            <div class="col-12">
+                                <span class="text-muted small d-block">Property Address / Location</span>
+                                <div class="fw-semibold" id="certLocation">--</div>
+                            </div>
+                            <div class="col-12">
+                                <span class="text-muted small d-block">Smart Contract Owner Wallet</span>
+                                <code class="tx-hash font-mono text-dark d-block" id="certWallet">--</code>
+                            </div>
+                            <div class="col-12">
+                                <span class="text-muted small d-block">Cryptographic SHA-256 Deed Fingerprint</span>
+                                <code class="tx-hash font-mono text-success d-block" id="certHash">--</code>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-top d-flex justify-content-between align-items-center small text-muted">
+                            <div>
+                                <span>Verified by: <strong>Ganache Ethereum Smart Contract</strong></span><br>
+                                <span id="certTxHash">Tx: --</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-shield-check me-1"></i>Cryptographically Tamper-Evident
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="window.print()">
+                            <i class="bi bi-printer me-1"></i> Print / Save PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Notification Container -->
+    <div class="toast-container toast-container-custom">
+        <div id="liveToast" class="toast align-items-center text-bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2" id="toastMessage">
+                    <i class="bi bi-check-circle-fill text-success"></i> Copied to clipboard!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center mt-5 mb-3">
+        <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
+            <span><i class="bi bi-shield-lock-fill text-primary me-1"></i> Ethereum Smart Contract</span>
+            <span>·</span>
+            <span><i class="bi bi-database-fill text-success me-1"></i> SQLite Persistence</span>
+            <span>·</span>
+            <span><i class="bi bi-fingerprint text-info me-1"></i> SHA-256 Verification</span>
+        </div>
+        <div class="text-muted small">
+            LandLedger Protocol · Ganache Local Blockchain · Academic & Demonstration Mini-Project
+        </div>
+    </footer>
+</div>
+
+<!-- Bootstrap 5.3.3 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let hashManuallyUploaded = false;
+    let listOffset = 0;
+    let allLoadedProperties = [];
+    let ganacheAccounts = [];
+
+    // Toast feedback helper
+    function showToast(message, isSuccess = true) {
+        const toastEl = document.getElementById("liveToast");
+        const msgEl = document.getElementById("toastMessage");
+        msgEl.innerHTML = `<i class="bi bi-${isSuccess ? 'check-circle-fill text-success' : 'exclamation-circle-fill text-warning'}"></i> ${message}`;
+        const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2000 });
+        toast.show();
+    }
+
+    function showAlert(el, type, message) {
+        el.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show mb-0" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+        el.classList.remove("d-none");
+    }
+
+    function clearAlert(el) {
+        el.innerHTML = "";
+        el.classList.add("d-none");
+    }
+
+    async function parseJsonResponse(response) {
+        const data = await response.json();
+        if (!response.ok || data.success === false) {
+            throw new Error(data.error || "Request failed");
+        }
+        return data;
+    }
+
+    function switchTab(tabId) {
+        const triggerEl = document.querySelector(`[data-bs-target="#${tabId}"]`);
+        if (triggerEl) {
+            bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }
+
+    function copyToClipboard(text, btnEl) {
+        if (!text) return;
+        const doFeedback = () => {
+            if (btnEl) {
+                const originalHtml = btnEl.innerHTML;
+                btnEl.classList.add("copied");
+                btnEl.innerHTML = '<i class="bi bi-check2"></i> Copied!';
+                setTimeout(() => {
+                    btnEl.classList.remove("copied");
+                    btnEl.innerHTML = originalHtml;
+                }, 1500);
+            }
+            showToast("Copied to clipboard: " + (text.length > 25 ? text.slice(0, 25) + '…' : text));
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(doFeedback).catch(() => fallbackCopy(text, doFeedback));
+        } else {
+            fallbackCopy(text, doFeedback);
+        }
+    }
+
+    function fallbackCopy(text, callback) {
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        temp.style.position = "fixed";
+        temp.style.opacity = "0";
+        document.body.appendChild(temp);
+        temp.focus();
+        temp.select();
+        try {
+            document.execCommand("copy");
+            if (callback) callback();
+        } catch (e) {
+            console.error("Copy failed", e);
+        }
+        document.body.removeChild(temp);
+    }
+
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest(".copy-btn");
+        if (!btn) return;
+        let textToCopy = "";
+        if (btn.dataset.copyText) {
+            textToCopy = btn.dataset.copyText;
+        } else if (btn.dataset.copyTarget) {
+            const targetEl = document.getElementById(btn.dataset.copyTarget);
+            if (targetEl) {
+                textToCopy = targetEl.value || targetEl.textContent || "";
+            }
+        }
+        if (textToCopy) {
+            copyToClipboard(textToCopy.trim(), btn);
+        }
+    });
+
+    /* Cryptographic Helpers */
+    async function computeSha256(text) {
+        try {
+            const data = new TextEncoder().encode(text);
+            const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+        } catch (err) {
+            let hash = 0;
+            for (let i = 0; i < text.length; i++) {
+                hash = ((hash << 5) - hash) + text.charCodeAt(i);
+                hash |= 0;
+            }
+            return (Math.abs(hash).toString(16).repeat(8)).slice(0, 64);
+        }
+    }
+
+    async function computeFileSha256(file) {
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function autoGenerateHash(force = false) {
+        if (hashManuallyUploaded && !force) return;
+        const form = document.getElementById("registerForm");
+        const propNum = form.property_number ? form.property_number.value.trim() : "";
+        const srvNum = form.survey_number ? form.survey_number.value.trim() : "";
+        const owner = form.owner_name ? form.owner_name.value.trim() : "";
+        const loc = form.location ? form.location.value.trim() : "";
+        const area = form.area ? form.area.value.trim() : "";
+        const type = form.property_type ? form.property_type.value : "";
+
+        const seed = `${propNum}|${srvNum}|${owner}|${loc}|${area}|${type}|${Date.now()}|${Math.random()}`;
+        const hash = await computeSha256(seed);
+        const docInput = document.getElementById("registerDocHash");
+        if (docInput) {
+            docInput.value = hash;
+        }
+
+        const badge = document.getElementById("hashStatusBadge");
+        if (badge) {
+            badge.innerHTML = '<i class="bi bi-magic me-1"></i>Auto-Generated';
+            badge.className = "badge bg-success-subtle text-success border border-success-subtle ms-1";
+        }
+        const hint = document.getElementById("hashSourceHint");
+        if (hint) {
+            hint.innerHTML = '<i class="bi bi-info-circle me-1"></i>Cryptographic fingerprint automatically generated from property deed metadata.';
+        }
+        hashManuallyUploaded = false;
+    }
+
+    document.getElementById("autoGenHashBtn").addEventListener("click", () => {
+        autoGenerateHash(true);
+        showToast("Generated new cryptographic SHA-256 hash");
+    });
+
+    document.getElementById("triggerDocUploadBtn").addEventListener("click", () => {
+        document.getElementById("registerDocFileInput").click();
+    });
+
+    document.getElementById("registerDocFileInput").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const hash = await computeFileSha256(file);
+            const docInput = document.getElementById("registerDocHash");
+            docInput.value = hash;
+            hashManuallyUploaded = true;
+            const badge = document.getElementById("hashStatusBadge");
+            badge.innerHTML = `<i class="bi bi-file-earmark-check me-1"></i>File: ${file.name.slice(0, 15)}${file.name.length > 15 ? '…' : ''}`;
+            badge.className = "badge bg-primary-subtle text-primary border border-primary-subtle ms-1";
+            document.getElementById("hashSourceHint").innerHTML = `<i class="bi bi-check-circle text-success me-1"></i>Cryptographic SHA-256 calculated from uploaded deed file (${(file.size / 1024).toFixed(1)} KB).`;
+            showToast(`Computed SHA-256 for "${file.name}"`);
+        } catch (err) {
+            alert("Could not compute hash from file: " + err.message);
+        }
+    });
+
+    // Drag and Drop Deed Zone in Document Hash Tab
+    const dropzone = document.getElementById("deedDropzone");
+    const hashFileInput = document.getElementById("hashFile");
+    const dropzoneName = document.getElementById("dropzoneFileName");
+
+    if (dropzone) {
+        dropzone.addEventListener("click", () => hashFileInput.click());
+        dropzone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropzone.classList.add("dragover");
+        });
+        ["dragleave", "dragend"].forEach(ev => {
+            dropzone.addEventListener(ev, () => dropzone.classList.remove("dragover"));
+        });
+        dropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropzone.classList.remove("dragover");
+            if (e.dataTransfer.files.length) {
+                hashFileInput.files = e.dataTransfer.files;
+                handleHashFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+        hashFileInput.addEventListener("change", (e) => {
+            if (e.target.files.length) {
+                handleHashFileSelection(e.target.files[0]);
+            }
+        });
+    }
+
+    function handleHashFileSelection(file) {
+        dropzoneName.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        dropzoneName.classList.remove("d-none");
+    }
+
+    const regForm = document.getElementById("registerForm");
+    ["property_number", "survey_number", "owner_name", "location", "area"].forEach(fieldName => {
+        const input = regForm.elements[fieldName];
+        if (input) {
+            input.addEventListener("input", () => {
+                if (!hashManuallyUploaded) {
+                    autoGenerateHash();
+                }
+            });
+        }
+    });
+    if (regForm.elements["property_type"]) {
+        regForm.elements["property_type"].addEventListener("change", () => {
+            if (!hashManuallyUploaded) {
+                autoGenerateHash();
+            }
+        });
+    }
+
+    /* Live Status & KPI Metrics */
+    async function refreshStatus() {
+        const dot = document.getElementById("statusDot");
+        const text = document.getElementById("statusText");
+        const kpiProps = document.getElementById("kpiTotalProperties");
+        const kpiTransfers = document.getElementById("kpiTotalTransfers");
+        const kpiChain = document.getElementById("kpiChainId");
+        const kpiBadge = document.getElementById("kpiChainBadge");
+        const accBal = document.getElementById("accountBalanceBadge");
+        const accAddr = document.getElementById("accountAddressTruncated");
+        const tabBadge = document.getElementById("tabTotalBadge");
+
+        try {
+            const res = await fetch("/api/status");
+            const payload = await res.json();
+            const s = payload.data;
+
+            if (s.connected) {
+                dot.className = "pulse-indicator online";
+                text.textContent = `Online · Chain ${s.chain_id}`;
+                kpiChain.textContent = `Chain ${s.chain_id}`;
+                kpiBadge.textContent = "Ganache";
+                kpiBadge.className = "badge bg-success-subtle text-success border border-success-subtle";
+
+                const propCount = s.property_count ?? s.total_db_properties ?? 0;
+                kpiProps.textContent = propCount.toLocaleString();
+                tabBadge.textContent = propCount;
+                kpiTransfers.textContent = (s.total_transfers ?? 0).toLocaleString();
+
+                if (accBal) accBal.textContent = `${Number(s.balance_eth || 0).toFixed(2)} ETH`;
+                if (accAddr && s.default_account) {
+                    accAddr.textContent = `${s.default_account.slice(0, 6)}…${s.default_account.slice(-4)}`;
+                }
+
+                if (s.accounts && s.accounts.length) {
+                    ganacheAccounts = s.accounts;
+                    populateGanacheAccountsDropdown(s.accounts);
+                }
+            } else {
+                dot.className = "pulse-indicator offline";
+                text.textContent = s.error ? "Chain Offline" : "Disconnected";
+                kpiChain.textContent = "Offline";
+                kpiBadge.textContent = "No RPC";
+                kpiBadge.className = "badge bg-danger-subtle text-danger border border-danger-subtle";
+            }
+        } catch (e) {
+            dot.className = "pulse-indicator offline";
+            text.textContent = "Server unreachable";
+        }
+    }
+
+    function populateGanacheAccountsDropdown(accounts) {
+        const dd = document.getElementById("ganacheAccountsDropdown");
+        if (!dd) return;
+        dd.innerHTML = accounts.map((acc, i) => `
+            <li>
+                <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" onclick="selectGanacheAccount('${acc}', event)">
+                    <span>Account #${i} <code class="font-mono ms-1">${acc.slice(0, 8)}…${acc.slice(-6)}</code></span>
+                    ${i === 0 ? '<span class="badge bg-secondary">Default</span>' : ''}
+                </a>
+            </li>
+        `).join("");
+    }
+
+    function selectGanacheAccount(address, e) {
+        if (e) e.preventDefault();
+        const input = document.getElementById("transferNewWallet");
+        if (input) input.value = address;
+        showToast("Selected Ganache account: " + address.slice(0, 10) + "…");
+    }
+
+    /* Proper UI Render Functions */
+    function renderRegisterResult(data) {
+        const card = document.getElementById("registerResultCard");
+        const rec = data.blockchain_record || data.local_record || {};
+
+        document.getElementById("regBadgePropertyId").textContent = `ID #${data.property_id}`;
+        document.getElementById("regTxHash").textContent = data.transaction_hash;
+        document.getElementById("regBlockNum").textContent = `#${data.block_number}`;
+
+        document.getElementById("regPropNumber").textContent = rec.property_number || "--";
+        document.getElementById("regSurveyNumber").textContent = rec.survey_number || "--";
+        document.getElementById("regOwnerName").textContent = rec.owner_name || "--";
+        document.getElementById("regPropType").textContent = rec.property_type || "Residential";
+        document.getElementById("regArea").textContent = Number(rec.area || 0).toLocaleString();
+        document.getElementById("regLocation").textContent = rec.location || "--";
+        document.getElementById("regOwnerWallet").textContent = rec.owner_wallet || "--";
+        document.getElementById("regDocHash").textContent = rec.document_hash || data.local_record?.document_hash || "--";
+
+        document.getElementById("registerRawJson").textContent = JSON.stringify(data, null, 2);
+
+        document.getElementById("regVerifyNowBtn").onclick = () => goToVerify(data.property_id);
+        document.getElementById("regViewAllBtn").onclick = () => switchTab("tab-list");
+        document.getElementById("regResetFormBtn").onclick = () => {
+            document.getElementById("registerForm").reset();
+            card.classList.add("d-none");
+            clearAlert(document.getElementById("registerAlert"));
+            autoGenerateHash(true);
+        };
+
+        card.classList.remove("d-none");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function renderVerifyResult(data) {
+        const card = document.getElementById("verifyResultCard");
+        const bc = data.blockchain_record;
+        const dbRec = data.database_record;
+        const match = data.records_match;
+
+        const icon = document.getElementById("verifyStatusIcon");
+        const title = document.getElementById("verifyStatusTitle");
+        const badge = document.getElementById("verifyBadgeMatch");
+        const banner = document.getElementById("verifyBannerMsg");
+
+        if (match === true) {
+            icon.innerHTML = '<i class="bi bi-shield-check text-success"></i>';
+            title.textContent = "Blockchain Record Verified Authentic";
+            badge.textContent = "✓ In Sync with Blockchain";
+            badge.className = "badge bg-success text-white px-3 py-2 fs-6 fw-bold";
+            banner.className = "alert alert-success mb-4";
+            banner.innerHTML = "<strong>✓ Verification Confirmed:</strong> The on-chain smart contract data matches the local database mirror across all cryptographic and metadata checks.";
+        } else if (match === false) {
+            icon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+            title.textContent = "Discrepancy Detected";
+            badge.textContent = "⚠️ Mismatch Alert";
+            badge.className = "badge bg-warning text-dark px-3 py-2 fs-6 fw-bold";
+            banner.className = "alert alert-warning mb-4";
+            banner.innerHTML = "<strong>Integrity Notice:</strong> The smart contract on blockchain is authoritative. The local database record differs from live on-chain state.";
+        } else {
+            icon.innerHTML = '<i class="bi bi-link-45deg text-info"></i>';
+            title.textContent = "On-Chain Record Verified";
+            badge.textContent = "On-Chain Verified";
+            badge.className = "badge bg-info text-white px-3 py-2 fs-6 fw-bold";
+            banner.className = "alert alert-info mb-4";
+            banner.innerHTML = "<strong>Blockchain Record Retrieved:</strong> Validated directly against smart contract storage.";
+        }
+
+        if (bc) {
+            document.getElementById("vfChainId").textContent = bc.id;
+            document.getElementById("vfChainPropNum").textContent = bc.property_number;
+            document.getElementById("vfChainSurveyNum").textContent = bc.survey_number;
+            document.getElementById("vfChainOwner").textContent = bc.owner_name;
+            document.getElementById("vfChainWallet").textContent = bc.owner_wallet;
+            document.getElementById("vfChainType").textContent = bc.property_type;
+            document.getElementById("vfChainArea").textContent = Number(bc.area).toLocaleString();
+            document.getElementById("vfChainLocation").textContent = bc.location;
+            document.getElementById("vfChainHash").textContent = bc.document_hash || "0x0000000000000000000000000000000000000000000000000000000000000000";
+        }
+
+        if (dbRec) {
+            document.getElementById("vfDbContent").classList.remove("d-none");
+            document.getElementById("vfDbEmpty").classList.add("d-none");
+            document.getElementById("vfDbStatusBadge").textContent = "SQLite Synced";
+            document.getElementById("vfDbStatusBadge").className = "badge bg-success-subtle text-success border border-success-subtle";
+
+            document.getElementById("vfDbId").textContent = dbRec.id;
+            document.getElementById("vfDbPropNum").textContent = dbRec.property_number;
+            document.getElementById("vfDbSurveyNum").textContent = dbRec.survey_number;
+            document.getElementById("vfDbOwner").textContent = dbRec.owner_name;
+            document.getElementById("vfDbWallet").textContent = dbRec.owner_wallet;
+            document.getElementById("vfDbTxHash").textContent = dbRec.register_tx_hash;
+            document.getElementById("vfDbBlock").textContent = `#${dbRec.register_block_number}`;
+            document.getElementById("vfDbHash").textContent = dbRec.document_hash || "None";
+        } else {
+            document.getElementById("vfDbContent").classList.add("d-none");
+            document.getElementById("vfDbEmpty").classList.remove("d-none");
+            document.getElementById("vfDbStatusBadge").textContent = "No Local Copy";
+            document.getElementById("vfDbStatusBadge").className = "badge bg-secondary-subtle text-secondary border border-secondary-subtle";
+        }
+
+        const checklist = document.getElementById("vfChecklist");
+        if (bc && dbRec) {
+            const checks = [
+                { label: "Property Number Match", ok: bc.property_number === dbRec.property_number },
+                { label: "Survey Number Match", ok: bc.survey_number === dbRec.survey_number },
+                { label: "Legal Owner Name Match", ok: bc.owner_name === dbRec.owner_name },
+                { label: "Owner Wallet Address Match", ok: bc.owner_wallet.toLowerCase() === dbRec.owner_wallet.toLowerCase() },
+                { label: "Area & Property Type Match", ok: Number(bc.area) === Number(dbRec.area) && bc.property_type === dbRec.property_type }
+            ];
+            const bcHash = (bc.document_hash || "").toLowerCase().replace("0x", "");
+            const dbHash = (dbRec.document_hash || "").toLowerCase().replace("0x", "");
+            if (bcHash || dbHash) {
+                checks.push({ label: "Cryptographic Document SHA-256 Hash Match", ok: bcHash === dbHash });
+            }
+            checklist.innerHTML = checks.map(c => `
+                <div class="col-md-6">
+                    <div class="check-item ${c.ok ? 'match' : 'mismatch'}">
+                        <i class="bi bi-${c.ok ? 'check-circle-fill' : 'x-circle-fill'}"></i>
+                        <span>${c.label}</span>
+                    </div>
+                </div>
+            `).join("");
+        } else if (bc) {
+            checklist.innerHTML = `
+                <div class="col-12 text-muted small">
+                    ✓ Validated directly on Ethereum smart contract storage (Property Count verified).
+                </div>
+            `;
+        }
+
+        const historyWrap = document.getElementById("vfHistoryWrap");
+        const historyBody = document.getElementById("vfHistoryBody");
+        if (data.transfer_history && data.transfer_history.length > 0) {
+            historyBody.innerHTML = data.transfer_history.map((h, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td class="small">${h.from_owner_name || ""}<br><code class="tx-hash">${h.from_wallet}</code></td>
+                    <td class="small">${h.to_owner_name}<br><code class="tx-hash">${h.to_wallet}</code></td>
+                    <td><code class="tx-hash">${h.tx_hash}</code></td>
+                    <td>#${h.block_number}</td>
+                    <td class="small text-muted">${h.transferred_at}</td>
+                </tr>
+            `).join("");
+            historyWrap.classList.remove("d-none");
+        } else {
+            historyWrap.classList.add("d-none");
+        }
+
+        document.getElementById("vfTransferBtn").onclick = () => goToTransfer(bc.id);
+        document.getElementById("verifyRawJson").textContent = JSON.stringify(data, null, 2);
+
+        card.classList.remove("d-none");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function renderTransferResult(data) {
+        const card = document.getElementById("transferResultCard");
+        const form = document.getElementById("transferForm");
+
+        document.getElementById("trBadgePropertyId").textContent = `ID #${data.property_id || form.property_id.value}`;
+        document.getElementById("trPrevOwnerName").textContent = data.previous_owner_name || "Previous Owner";
+        document.getElementById("trPrevOwnerWallet").textContent = data.previous_owner;
+        document.getElementById("trNewOwnerName").textContent = data.new_owner_name || form.new_owner_name.value;
+        document.getElementById("trNewOwnerWallet").textContent = data.new_owner;
+
+        document.getElementById("trTxHash").textContent = data.transaction_hash;
+        document.getElementById("trBlockNum").textContent = `#${data.block_number}`;
+
+        document.getElementById("trVerifyBtn").onclick = () => goToVerify(data.property_id || form.property_id.value);
+        document.getElementById("transferRawJson").textContent = JSON.stringify(data, null, 2);
+
+        card.classList.remove("d-none");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function renderHashResult(data) {
+        const card = document.getElementById("hashResultCard");
+        document.getElementById("hashSourceBadge").textContent = data.filename || "Inline Text";
+        document.getElementById("hashOutputRaw").value = data.sha256;
+        document.getElementById("hashOutputPrefixed").value = data.sha256_prefixed || `0x${data.sha256}`;
+        document.getElementById("hashRawJson").textContent = JSON.stringify(data, null, 2);
+
+        document.getElementById("useHashInRegisterBtn").onclick = () => {
+            const docInput = document.getElementById("registerDocHash");
+            docInput.value = data.sha256;
+            hashManuallyUploaded = true;
+            const badge = document.getElementById("hashStatusBadge");
+            badge.innerHTML = '<i class="bi bi-link-45deg me-1"></i>Imported from Hash Tool';
+            badge.className = "badge bg-info-subtle text-info border border-info-subtle ms-1";
+            document.getElementById("hashSourceHint").innerHTML = `<i class="bi bi-check-circle text-success me-1"></i>Cryptographic SHA-256 imported from Document Hash tool (${data.filename || 'text'}).`;
+            switchTab("tab-register");
+            document.getElementById("registerForm").property_number.focus();
+            showToast("Imported SHA-256 hash to Register form");
+        };
+
+        card.classList.remove("d-none");
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function goToVerify(propertyId) {
+        document.getElementById("verifyPropertyId").value = propertyId;
+        switchTab("tab-verify");
+        document.getElementById("verifyBtn").click();
+    }
+
+    function quickVerify(id) {
+        document.getElementById("verifyPropertyId").value = id;
+        document.getElementById("verifyBtn").click();
+    }
+
+    function goToTransfer(propertyId) {
+        const form = document.getElementById("transferForm");
+        form.property_id.value = propertyId;
+        switchTab("tab-transfer");
+        form.new_owner_wallet.focus();
+    }
+
+    /* Registry Explorer Table & Live Filter */
+    async function loadProperties() {
+        const tbody = document.getElementById("propertiesBody");
+        const summary = document.getElementById("listSummary");
+        const pageInfo = document.getElementById("pageInfo");
+        const limit = parseInt(document.getElementById("pageSize").value, 10);
+        try {
+            const data = await parseJsonResponse(
+                await fetch(`/api/properties?limit=${limit}&offset=${listOffset}`)
+            );
+            allLoadedProperties = data.data;
+            const total = data.total ?? allLoadedProperties.length;
+            summary.textContent = `${total} total verified records on blockchain & SQLite mirror`;
+            const page = Math.floor(listOffset / limit) + 1;
+            const totalPages = Math.max(1, Math.ceil(total / limit));
+            pageInfo.textContent = `Page ${page} of ${totalPages}`;
+            document.getElementById("prevPageBtn").disabled = listOffset <= 0;
+            document.getElementById("nextPageBtn").disabled = listOffset + limit >= total;
+
+            renderPropertiesTable(allLoadedProperties);
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-danger py-4 text-center">${e.message}</td></tr>`;
+        }
+    }
+
+    function renderPropertiesTable(rows) {
+        const tbody = document.getElementById("propertiesBody");
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-muted py-4 text-center">No matching records found.</td></tr>';
+            return;
+        }
+
+        const typeBadgeMap = {
+            "Residential": "bg-primary-subtle text-primary border-primary-subtle",
+            "Commercial": "bg-purple-subtle text-purple border-purple-subtle",
+            "Agricultural": "bg-success-subtle text-success border-success-subtle",
+            "Industrial": "bg-warning-subtle text-warning border-warning-subtle"
+        };
+
+        tbody.innerHTML = rows.map(p => {
+            const docHash = p.document_hash || "";
+            const docHashDisplay = docHash
+                ? `<span class="font-mono small text-success" title="${docHash}">${docHash.slice(0, 8)}…${docHash.slice(-6)}</span>
+                   <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none copy-btn ms-1" data-copy-text="${docHash}" title="Copy SHA-256"><i class="bi bi-clipboard"></i></button>`
+                : `<span class="text-muted small">None</span>`;
+
+            const txHash = p.register_tx_hash || "";
+            const txHashDisplay = txHash
+                ? `<span class="font-mono small text-primary" title="${txHash}">${txHash.slice(0, 8)}…</span>
+                   <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none copy-btn ms-1" data-copy-text="${txHash}" title="Copy Tx Hash"><i class="bi bi-clipboard"></i></button>`
+                : `<span class="text-muted small">--</span>`;
+
+            const badgeClass = typeBadgeMap[p.property_type] || "bg-light text-dark border";
+
+            return `
+                <tr>
+                    <td class="fw-bold"><span class="badge bg-light text-dark border">#${p.id}</span></td>
+                    <td class="fw-semibold text-dark">${p.property_number}</td>
+                    <td>${p.survey_number}</td>
+                    <td class="fw-semibold">${p.owner_name}</td>
+                    <td><span class="badge ${badgeClass} border">${p.property_type}</span></td>
+                    <td>${Number(p.area).toLocaleString()} sq.ft</td>
+                    <td>${docHashDisplay}</td>
+                    <td>${txHashDisplay}</td>
+                    <td class="text-end text-nowrap">
+                        <button type="button" class="btn btn-outline-success btn-sm py-0 px-2" onclick="goToVerify(${p.id})" title="Verify On-Chain">
+                            <i class="bi bi-shield-check"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2 ms-1" onclick="goToTransfer(${p.id})" title="Transfer Ownership">
+                            <i class="bi bi-arrow-left-right"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 ms-1" onclick="openCertificateModal(${p.id})" title="Digital Certificate">
+                            <i class="bi bi-award"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // Client-side search and type filtering
+    function applyTableFilter() {
+        const query = document.getElementById("tableSearchInput").value.trim().toLowerCase();
+        const type = document.getElementById("typeFilterSelect").value;
+
+        const filtered = allLoadedProperties.filter(p => {
+            const matchesType = type === "ALL" || p.property_type === type;
+            const matchesQuery = !query || 
+                (p.property_number && p.property_number.toLowerCase().includes(query)) ||
+                (p.survey_number && p.survey_number.toLowerCase().includes(query)) ||
+                (p.owner_name && p.owner_name.toLowerCase().includes(query)) ||
+                (p.location && p.location.toLowerCase().includes(query));
+            return matchesType && matchesQuery;
+        });
+
+        renderPropertiesTable(filtered);
+    }
+
+    document.getElementById("tableSearchInput").addEventListener("input", applyTableFilter);
+    document.getElementById("typeFilterSelect").addEventListener("change", applyTableFilter);
+
+    // Digital Title Deed Certificate Modal
+    function openCertificateModal(propertyId) {
+        const p = allLoadedProperties.find(item => item.id === propertyId);
+        if (!p) return;
+
+        document.getElementById("certPropertyId").textContent = `#${p.id} — ${p.property_number}`;
+        document.getElementById("certSurveyNum").textContent = p.survey_number;
+        document.getElementById("certOwnerName").textContent = p.owner_name;
+        document.getElementById("certTypeArea").textContent = `${p.property_type} · ${Number(p.area).toLocaleString()} sq.ft`;
+        document.getElementById("certLocation").textContent = p.location;
+        document.getElementById("certWallet").textContent = p.owner_wallet;
+        document.getElementById("certHash").textContent = p.document_hash || "Unspecified";
+        document.getElementById("certTxHash").textContent = `Registration Tx: ${p.register_tx_hash || 'N/A'}`;
+
+        const modal = new bootstrap.Modal(document.getElementById("certificateModal"));
+        modal.show();
+    }
+
+    /* Form Handlers */
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("registerBtn");
+        const alertEl = document.getElementById("registerAlert");
+        const resultCard = document.getElementById("registerResultCard");
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>Mining Blockchain Transaction…`;
+        clearAlert(alertEl);
+        resultCard.classList.add("d-none");
+
+        const form = e.target;
+        const body = Object.fromEntries(new FormData(form));
+
+        try {
+            const data = await parseJsonResponse(await fetch("/api/properties", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            }));
+            showAlert(alertEl, "success",
+                `<strong>Success:</strong> Land title registered on Ethereum blockchain (ID <strong>#${data.property_id}</strong>) and saved to SQLite.`);
+            renderRegisterResult(data);
+            loadProperties();
+            refreshStatus();
+            showToast("Property Title successfully registered on chain!");
+        } catch (err) {
+            showAlert(alertEl, "danger", `<strong>Registration Error:</strong> ${err.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Register Title on Blockchain';
+        }
+    });
+
+    document.getElementById("verifyBtn").addEventListener("click", async () => {
+        const id = document.getElementById("verifyPropertyId").value;
+        const alertEl = document.getElementById("verifyAlert");
+        const resultCard = document.getElementById("verifyResultCard");
+        const btn = document.getElementById("verifyBtn");
+        if (!id) return;
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Querying Chain…`;
+        clearAlert(alertEl);
+        resultCard.classList.add("d-none");
+
+        try {
+            const data = await parseJsonResponse(await fetch(`/api/properties/${id}/verify`));
+            renderVerifyResult(data);
+        } catch (err) {
+            showAlert(alertEl, "danger", `<strong>Verification Error:</strong> ${err.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-search me-1"></i> Query & Verify On-Chain';
+        }
+    });
+
+    document.getElementById("btnVerifyLatest").addEventListener("click", () => {
+        if (allLoadedProperties.length) {
+            quickVerify(allLoadedProperties[0].id);
+        }
+    });
+
+    document.getElementById("transferForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById("transferAlert");
+        const resultCard = document.getElementById("transferResultCard");
+        const btn = document.getElementById("transferBtn");
+        clearAlert(alertEl);
+        resultCard.classList.add("d-none");
+
+        const form = e.target;
+        const propertyId = form.property_id.value;
+        const body = {
+            new_owner_wallet: form.new_owner_wallet.value,
+            new_owner_name: form.new_owner_name.value
+        };
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Mining Transfer Transaction…`;
+
+        try {
+            const data = await parseJsonResponse(await fetch(`/api/properties/${propertyId}/transfer`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            }));
+            showAlert(alertEl, "success",
+                `<strong>Transfer Complete:</strong> Ownership updated on blockchain in block #${data.block_number}.`);
+            renderTransferResult(data);
+            loadProperties();
+            refreshStatus();
+            showToast("Title ownership transferred on-chain!");
+        } catch (err) {
+            showAlert(alertEl, "danger", `<strong>Transfer Error:</strong> ${err.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Execute Title Transfer On-Chain';
+        }
+    });
+
+    document.getElementById("loadHistoryBtn").addEventListener("click", async () => {
+        const form = document.getElementById("transferForm");
+        const propertyId = form.property_id.value;
+        const wrap = document.getElementById("historyTableWrap");
+        const tbody = document.getElementById("historyBody");
+        if (!propertyId) {
+            showAlert(document.getElementById("transferAlert"), "warning", "Please specify a Property ID first.");
+            return;
+        }
+        try {
+            const data = await parseJsonResponse(await fetch(`/api/properties/${propertyId}/history`));
+            const rows = data.data;
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center py-3">No transfer history recorded for this property yet.</td></tr>';
+            } else {
+                tbody.innerHTML = rows.map((h, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td class="small">${h.from_owner_name || ""}<br><code class="tx-hash">${h.from_wallet}</code></td>
+                        <td class="small fw-semibold text-success">${h.to_owner_name}<br><code class="tx-hash">${h.to_wallet}</code></td>
+                        <td><code class="tx-hash">${h.tx_hash}</code></td>
+                        <td>#${h.block_number}</td>
+                        <td class="small text-muted">${h.transferred_at}</td>
+                    </tr>
+                `).join("");
+            }
+            wrap.classList.remove("d-none");
+            wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (err) {
+            showAlert(document.getElementById("transferAlert"), "danger", err.message);
+        }
+    });
+
+    document.getElementById("hashForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const alertEl = document.getElementById("hashAlert");
+        const resultCard = document.getElementById("hashResultCard");
+        const form = e.target;
+        const fileInput = document.getElementById("hashFile");
+        clearAlert(alertEl);
+        resultCard.classList.add("d-none");
+
+        try {
+            let response;
+            if (fileInput.files.length) {
+                const fd = new FormData();
+                fd.append("file", fileInput.files[0]);
+                response = await fetch("/api/documents/hash", { method: "POST", body: fd });
+            } else {
+                response = await fetch("/api/documents/hash", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: form.text.value })
+                });
+            }
+            const data = await parseJsonResponse(response);
+            renderHashResult(data);
+            showToast("Computed cryptographic SHA-256 hash");
+        } catch (err) {
+            showAlert(alertEl, "danger", err.message);
+        }
+    });
+
+    document.getElementById("refreshListBtn").addEventListener("click", () => {
+        loadProperties();
+        refreshStatus();
+        showToast("Refreshed title records from blockchain");
+    });
+
+    document.getElementById("pageSize").addEventListener("change", () => {
+        listOffset = 0;
+        loadProperties();
+    });
+    document.getElementById("prevPageBtn").addEventListener("click", () => {
+        const limit = parseInt(document.getElementById("pageSize").value, 10);
+        listOffset = Math.max(0, listOffset - limit);
+        loadProperties();
+    });
+    document.getElementById("nextPageBtn").addEventListener("click", () => {
+        const limit = parseInt(document.getElementById("pageSize").value, 10);
+        listOffset += limit;
+        loadProperties();
+    });
+
+    // Initialize state
+    autoGenerateHash();
+    refreshStatus();
+    loadProperties();
+</script>
+</body>
+</html>
